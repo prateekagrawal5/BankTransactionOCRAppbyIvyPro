@@ -1,13 +1,21 @@
 import { GoogleGenAI, Type, Part } from "@google/genai";
 import { AnalysisResult, Transaction } from '../types';
 
-// Assume process.env.API_KEY is configured externally
-const API_KEY = process.env.API_KEY;
+// The key must use a specific prefix (like VITE_) to be exposed to the browser.
+// We are renaming API_KEY to VITE_API_KEY
+const API_KEY = process.env.VITE_API_KEY;
+
 if (!API_KEY) {
-  throw new Error("API_KEY environment variable not set");
+    throw new Error("VITE_API_KEY environment variable not set. Please set it in Netlify.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// // Assume process.env.API_KEY is configured externally
+// const API_KEY = process.env.API_KEY;
+// if (!API_KEY) {
+//   throw new Error("API_KEY environment variable not set");
+// }
+
+// const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const transactionSchema = {
   type: Type.OBJECT,
