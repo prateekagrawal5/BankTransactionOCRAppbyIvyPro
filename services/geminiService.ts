@@ -1,22 +1,6 @@
 import { GoogleGenAI, Type, Part } from "@google/genai";
 import { AnalysisResult, Transaction } from '../types';
 
-// The key must use a specific prefix (like VITE_) to be exposed to the browser.
-// We are renaming API_KEY to VITE_API_KEY
-const API_KEY = process.env.VITE_API_KEY;
-
-if (!API_KEY) {
-    throw new Error("VITE_API_KEY environment variable not set. Please set it in Netlify.");
-}
-
-// // Assume process.env.API_KEY is configured externally
-// const API_KEY = process.env.API_KEY;
-// if (!API_KEY) {
-//   throw new Error("API_KEY environment variable not set");
-// }
-
-// const ai = new GoogleGenAI({ apiKey: API_KEY });
-
 const transactionSchema = {
   type: Type.OBJECT,
   properties: {
@@ -30,7 +14,7 @@ const transactionSchema = {
   required: ['date', 'description', 'amount', 'category', 'statementSource'],
 };
 
-export const analyzeStatement = async (fileParts: Part[]): Promise<AnalysisResult> => {
+export const analyzeStatement = async (ai: GoogleGenAI, fileParts: Part[]): Promise<AnalysisResult> => {
   const model = "gemini-2.5-flash";
   
   const prompt = `You are an expert financial analyst. Your task is to meticulously analyze the provided bank statement image(s) or PDF(s).

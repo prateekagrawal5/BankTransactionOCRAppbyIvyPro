@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { GoogleGenAI } from "@google/genai";
 import { Transaction, FinancialSummary, CategorySummary } from './types';
 import { analyzeStatement } from './services/geminiService';
 import { fileToBase64 } from './utils/fileUtils';
@@ -11,6 +12,8 @@ import IntelligentInsights from './components/IntelligentInsights';
 import TransactionFilters from './components/TransactionFilters';
 
 const App: React.FC = () => {
+  const [ai, setAi] = useState<GoogleGenAI | null>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const [files, setFiles] = useState<File[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
@@ -21,6 +24,27 @@ const App: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
+  useEffect(() => {
+    const initializeAi = async () => {
+      try {
+        const response = await fetch('/.netlify/functions/getApiKey');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch API key from server.');
+        }
+        const { apiKey } = await response.json();
+        if (!apiKey) {
+          throw new Error('API key is missing from server response.');
+        }
+        setAi(new GoogleGenAI({ apiKey }));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'An unknown error occurred during initialization.');
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    initializeAi();
+  }, []);
 
   const resetFilters = () => {
     setSelectedCategory('all');
@@ -40,6 +64,10 @@ const App: React.FC = () => {
   const handleAnalyze = async () => {
     if (files.length === 0) {
       setError("Please upload at least one bank statement file.");
+      return;
+    }
+    if (!ai) {
+      setError("The AI service is not initialized. Please check your API key configuration in Netlify.");
       return;
     }
 
@@ -62,7 +90,7 @@ const App: React.FC = () => {
         })
       );
       
-      const result = await analyzeStatement(fileParts);
+      const result = await analyzeStatement(ai, fileParts);
 
       const processedTransactions = result.transactions.map(transaction => {
         const docMatch = transaction.statementSource.match(/Document (\d+)/i);
@@ -181,10 +209,12 @@ const App: React.FC = () => {
           <div className="mt-6 flex justify-center">
             <button
               onClick={handleAnalyze}
-              disabled={isLoading || files.length === 0}
+              disabled={isLoading || files.length === 0 || isInitializing}
               className="px-8 py-3 bg-cyan-600 text-white font-bold rounded-lg shadow-md hover:bg-cyan-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 disabled:scale-100 flex items-center gap-2"
             >
-              {isLoading ? (
+              {isInitializing ? (
+                 "Initializing..."
+              ) : isLoading ? (
                 <>
                   <Spinner />
                   Analyzing...
